@@ -1,3 +1,4 @@
+import logging
 import os
 import pathlib
 from dataclasses import dataclass
@@ -19,6 +20,19 @@ class Config:
     repo: str = env["REPO"]
     data_dir: pathlib.Path = pathlib.Path(env.get("CLONE_DIR", dirs.user_cache_path))
     command: str = env["ENTRY_COMMAND"]
+
+
+@dataclass
+class LoggingConfig:
+    """Send alerts and stuff to a discord webhook."""
+
+    enabled: bool = False
+    webhook_id: Optional[int] = int(env.get("WEBHOOK_ID", 0)) or None
+    webhook_token: Optional[str] = env.get("WEBHOOK_TOKEN")
+    relay_level: int = int(env.get("LOGGING_RELAY_LEVEL", logging.WARNING))
+
+
+LoggingConfig.enabled = LoggingConfig.webhook_id is not None and LoggingConfig.webhook_token is not None
 
 
 @dataclass
