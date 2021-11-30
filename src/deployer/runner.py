@@ -12,7 +12,7 @@ import dulwich.porcelain
 import dulwich.repo
 import httpx
 
-from deployer import config, dirs
+from deployer import config, dirs, webhooks
 
 
 try:
@@ -33,11 +33,11 @@ def print(*args, **kwargs) -> None:
     builtins.print("deployer.runner: ", *args, **kwargs)
 
 
-headers = {"Accept": "application/vnd.github.v3+json"}
+HEADERS = {"Accept": "application/vnd.github.v3+json"}
 if config.GithubAPI.token:
-    headers["Authorization"] = "token " + config.GithubAPI.token
+    HEADERS["Authorization"] = "token " + config.GithubAPI.token
 
-ghapi_client = httpx.Client(base_url=str(config.GithubAPI.root), headers=headers)
+ghapi_client = httpx.Client(base_url=str(config.GithubAPI.root), headers=HEADERS)
 
 atexit.register(ghapi_client.close)
 
@@ -98,14 +98,26 @@ def run(cmd: str) -> None:
         etag = resp.headers["etag"]
         while True:
             headers = {"If-None-Match": etag}
-            resp = ghapi_client.get(REPO_ENDPOINT + "/commits", headers=headers)
+            params = {"per_page": 1}
+            resp = ghapi_client.get(REPO_ENDPOINT + "/commits", headers=headers, params=params)
 
             if resp.status_code != 304:
+                _ = webhooks.post_alert(
+                    title="Triggering redeploy",
+                    description="Redeploy triggered by a new commit to something somewhere. "
+                    "However, I don't parse the response yet from the api "
+                    "so I have no valuable information for you!",
+                )
+
                 break
             print(f"Sleeping for {REFRESH_RATE}")
             time.sleep(REFRESH_RATE)
 
         # new process
+        # we have to kill the process before we can run the pre-configured set-up script
+        # this is so there isn't some issue with updating and changing installed dependencies
+        # while the code is still running
+        # however, we could create a new venv.... and do it that way.
 
         print("Sending sigint")
         try:
