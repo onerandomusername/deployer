@@ -9,7 +9,7 @@ packages = [{ include = "deployer", from = 'src' }]
 [tool.poetry.dependencies]
 python = "^3.8"
 python-dotenv = "^0.19.2"
-httpx = "^0.21.1"
+httpx = "^0.23.0"
 dulwich = "^0.20.26"
 click = "^8.0.3"
 platformdirs = "^2.4.0"
